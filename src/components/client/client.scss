@@ -1,0 +1,22 @@
+.client {
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+
+    .container {
+        display: flex;
+        justify-content: center;
+    }
+
+    .phone-number {
+        @extend .container;
+    }
+
+    .callee-input-container {
+        @extend .container;
+    }
+
+    .buttons-container {
+        @extend .container;
+    }
+}
