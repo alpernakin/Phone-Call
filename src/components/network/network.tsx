@@ -1,13 +1,15 @@
 import './network.scss';
 import React, { Component } from 'react';
-import Client, { Participant, CallResponse } from '../client/client';
+import { Participant } from '../client/participant';
+import { CallResponse } from '../client/states';
+import Client from '../client/client';
 
 interface Props {
     numberOfParticipants: number;
 }
 
 interface State {
-    participants?: Participant[];
+    participants: Participant[];
 }
 
 export default class Network extends Component<Props, State> {
@@ -15,14 +17,8 @@ export default class Network extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            participants: []
-        };
-    }
-
-    componentDidMount() {
-        this.setState({
             participants: this.createParticipants(this.props.numberOfParticipants)
-        });
+        };
     }
 
     /**
@@ -61,15 +57,16 @@ export default class Network extends Component<Props, State> {
      * @param callerId Phone number for the caller.
      * @param calleeId Phone number for the callee.
      */
-    private call(callerId: string, calleeId: string): CallResponse {
-        let callee = this.state.participants?.find(x => x.number === calleeId);
+    async call(callerId: string, calleeId: string): Promise<CallResponse> {
+        const callee = this.state.participants?.find(x => x.number === calleeId);
         // if there is no participant with the given callee number
         if (!callee) {
 
             return CallResponse.unknown_number;
         }
         // then tell the callee
-        return callee.onCalled(callerId);
+        return await callee.onCallReceive(callerId) ?
+            CallResponse.ringing : CallResponse.busy;
     }
 
     /**
@@ -78,9 +75,9 @@ export default class Network extends Component<Props, State> {
      * @param callerId Phone number for the caller.
      * @param calleeId Phone number for the callee.
      */
-    private answer(callerId: string, calleeId: string) {
-        let caller = this.state.participants?.find(x => x.number === callerId);
-        caller?.onCalleeAnswered(calleeId);
+    async answer(callerId: string, calleeId: string): Promise<boolean> {
+        const caller = this.state.participants.find(x => x.number === callerId);
+        return await caller?.onCalleeAnswer(calleeId) || false;
     }
 
     /**
@@ -88,9 +85,9 @@ export default class Network extends Component<Props, State> {
      * @param callerId Phone number for the caller.
      * @param calleeId Phone number for the callee.
      */
-    private reject(callerId: string, calleeId: string) {
-        let caller = this.state.participants?.find(x => x.number === callerId);
-        caller?.onCalleeRejected(calleeId);
+    async reject(callerId: string, calleeId: string): Promise<boolean> {
+        const caller = this.state.participants.find(x => x.number === callerId);
+        return await caller?.onCalleeReject(calleeId) || false;
     }
 
     /**
@@ -99,9 +96,9 @@ export default class Network extends Component<Props, State> {
      * @param requesterId Phone number for who requests to hangup.
      * @param counterpartId Phone number for the counterpart.
      */
-    private hangup(requesterId: string, counterpartId: string) {
-        let counterpart = this.state.participants?.find(x => x.number === counterpartId);
-        counterpart?.onCalleeHangup(requesterId);
+    async hangup(requesterId: string, counterpartId: string): Promise<boolean> {
+        const counterpart = this.state.participants.find(x => x.number === counterpartId);
+        return await counterpart?.onCalleeHangup(requesterId) || false;
     }
 
     render() {
